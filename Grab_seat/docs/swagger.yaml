@@ -1,0 +1,93 @@
+definitions:
+  request.Grab:
+    properties:
+      end:
+        type: string
+      seat:
+        type: string
+      start:
+        type: string
+    type: object
+  response.Response:
+    properties:
+      code:
+        type: integer
+      data: {}
+      message:
+        type: string
+    type: object
+info:
+  contact: {}
+paths:
+  /grab/send:
+    post:
+      consumes:
+      - application/json
+      description: 发送消息到指定的抓取服务
+      parameters:
+      - description: 抓取请求
+        in: body
+        name: grab
+        required: true
+        schema:
+          $ref: '#/definitions/request.Grab'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 发送成功
+          schema:
+            $ref: '#/definitions/response.Response'
+        "400":
+          description: 解析失败或发送失败
+          schema:
+            $ref: '#/definitions/response.Response'
+      summary: 发送消息
+      tags:
+      - 抓取服务
+  /monitor/one:
+    post:
+      consumes:
+      - application/json
+      description: 检测指定座位的状态
+      parameters:
+      - description: 检测请求
+        in: body
+        name: grab
+        required: true
+        schema:
+          $ref: '#/definitions/request.Grab'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 检测成功
+          schema:
+            $ref: '#/definitions/response.Response'
+        "400":
+          description: 解析失败或检测失败
+          schema:
+            $ref: '#/definitions/response.Response'
+      summary: 检测一个座位的状态
+      tags:
+      - 监控服务
+  /sse:
+    get:
+      consumes:
+      - application/json
+      description: 处理服务器发送事件（SSE）
+      produces:
+      - text/event-stream
+      responses:
+        "200":
+          description: SSE 事件流
+          schema:
+            type: string
+        "500":
+          description: 服务器错误
+          schema:
+            $ref: '#/definitions/response.Response'
+      summary: 处理 SSE 事件
+      tags:
+      - SSE 服务
+swagger: "2.0"
