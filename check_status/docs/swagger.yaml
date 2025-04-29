@@ -1,0 +1,129 @@
+definitions:
+  request.User:
+    properties:
+      name:
+        type: string
+      qq:
+        type: string
+    type: object
+  response.Response:
+    properties:
+      code:
+        type: integer
+      data: {}
+      message:
+        type: string
+    type: object
+info:
+  contact: {}
+paths:
+  /events:
+    get:
+      consumes:
+      - application/json
+      description: 分页获取发邮件时间
+      parameters:
+      - description: 页码
+        in: query
+        name: pn
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 获取成功
+          schema:
+            $ref: '#/definitions/response.Response'
+        "400":
+          description: pn解析失败
+          schema:
+            $ref: '#/definitions/response.Response'
+        "404":
+          description: 获取失败
+          schema:
+            $ref: '#/definitions/response.Response'
+      summary: 分页获取发邮件时间
+      tags:
+      - events
+  /users:
+    delete:
+      consumes:
+      - application/json
+      description: 根据用户名删除用户
+      parameters:
+      - description: 用户名
+        in: query
+        name: name
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 删除成功
+          schema:
+            $ref: '#/definitions/response.Response'
+        "400":
+          description: 删除失败
+          schema:
+            $ref: '#/definitions/response.Response'
+      summary: 删除用户
+      tags:
+      - users
+    post:
+      consumes:
+      - application/json
+      description: 添加新用户
+      parameters:
+      - description: 用户信息
+        in: body
+        name: user
+        required: true
+        schema:
+          $ref: '#/definitions/request.User'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 添加成功
+          schema:
+            $ref: '#/definitions/response.Response'
+        "400":
+          description: 参数解析失败
+          schema:
+            $ref: '#/definitions/response.Response'
+      summary: 添加用户
+      tags:
+      - users
+  /users/qq:
+    put:
+      consumes:
+      - application/json
+      description: 根据用户信息修改用户的QQ
+      parameters:
+      - description: 用户信息
+        in: body
+        name: user
+        required: true
+        schema:
+          $ref: '#/definitions/request.User'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 修改成功
+          schema:
+            $ref: '#/definitions/response.Response'
+        "400":
+          description: 参数解析失败
+          schema:
+            $ref: '#/definitions/response.Response'
+        "404":
+          description: 修改失败
+          schema:
+            $ref: '#/definitions/response.Response'
+      summary: 修改用户的QQ
+      tags:
+      - users
+swagger: "2.0"

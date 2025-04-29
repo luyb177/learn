@@ -1,0 +1,26 @@
+syntax = "proto3";
+package pb;
+
+option go_package = ".;pb"; // 指定生成的go代码的路径
+
+message Res {
+  int32 ret = 1;
+  string act = 2;
+  string msg = 3;
+  repeated Info data = 4;
+}
+
+message Info {
+  string room_name = 1 [json_name = "roomName"];
+  string title = 2;
+  repeated T ts = 3;
+}
+
+message T {
+  string start = 1;
+  string end = 2;
+  string state = 3;
+  string title = 4;
+  string owner = 5;
+  bool occupy = 6;
+}
