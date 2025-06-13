@@ -2,6 +2,7 @@ package dao
 
 import (
 	"context"
+	"fmt"
 	"github.com/go-redis/redis/v8"
 	"gorm.io/gorm"
 	"learn/check_status/model"
@@ -19,6 +20,10 @@ type CheckDAO interface {
 	SaveEvent(event *model.Event) error
 	GetEvent(pn int) ([]model.Event, error)
 	DeleteUser(name string) error
+	GetSeatRecord(date string) (*model.SeatInfo, error)
+	SetSeatRecord(info *model.SeatInfo) error
+	SetOccupied(date string) error
+	GetOccupied(date string) (bool, error)
 }
 
 type CheckDAOImpl struct {
@@ -102,4 +107,50 @@ func (dao *CheckDAOImpl) GetEvent(pn int) ([]model.Event, error) {
 		return nil, result.Error
 	}
 	return events, nil
+}
+
+// ---------------------------------------------------------------------------------------------------------------------
+
+// GetSeatRecord 获取用户设置的座位信息
+func (dao *CheckDAOImpl) GetSeatRecord(date string) (*model.SeatInfo, error) {
+	userId := 1
+	var info model.SeatInfo
+	err := dao.rdb.HGetAll(context.Background(), "seat:record:"+fmt.Sprintf("%d:", userId)+date).Scan(&info)
+	if err != nil {
+		return nil, err
+	}
+	info.Date = date
+	return &info, nil
+}
+
+// SetSeatRecord  设置用户预约的座位信息
+// 用户只需要设置 座位号、开始时间、结束时间
+func (dao *CheckDAOImpl) SetSeatRecord(info *model.SeatInfo) error {
+	userId := 1
+	err := dao.rdb.HSet(context.Background(), "seat:record:"+fmt.Sprintf("%d:", userId)+info.Date,
+		"seat", info.Seat,
+		"start", info.Start,
+		"end", info.End).Err()
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (dao *CheckDAOImpl) SetOccupied(date string) error {
+	userId := 1
+	err := dao.rdb.HSet(context.Background(), "seat:record:"+fmt.Sprintf("%d", userId)+date, "occupied", 1).Err()
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (dao *CheckDAOImpl) GetOccupied(date string) (bool, error) {
+	userId := 1
+	occupied, err := dao.rdb.HGet(context.Background(), "seat:record:"+fmt.Sprintf("%d", userId)+date, "occupied").Int()
+	if err != nil {
+		return false, err
+	}
+	return occupied == 1, nil
 }

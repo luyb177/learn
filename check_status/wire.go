@@ -25,6 +25,7 @@ func InitApp(cfg string) (*route.App, error) {
 		tool.ProviderSet,
 		wire.Bind(new(service.CheckService), new(*service.Check)),
 		wire.Bind(new(dao.CheckDAO), new(*dao.CheckDAOImpl)),
+		wire.Bind(new(dao.GrabDAO), new(*dao.GrabDAOImpl)),
 	)
 	return nil, nil
 }

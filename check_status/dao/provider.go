@@ -6,4 +6,5 @@ var ProviderSet = wire.NewSet(
 	RedisDB,
 	MySqlDB,
 	NewCheckDAO,
+	NewGrabDAOImpl,
 )

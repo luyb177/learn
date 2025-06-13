@@ -15,6 +15,46 @@ const docTemplate = `{
     "host": "{{.Host}}",
     "basePath": "{{.BasePath}}",
     "paths": {
+        "/alter/seat": {
+            "post": {
+                "description": "根据传入的预约信息修改已有的预约记录",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "seats"
+                ],
+                "summary": "修改预约记录",
+                "parameters": [
+                    {
+                        "description": "预约信息",
+                        "name": "grab",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/request.Grab"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "修改预约消息成功",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "参数解析失败 或 修改预约消息失败",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    }
+                }
+            }
+        },
         "/events": {
             "get": {
                 "description": "分页获取发邮件时间",
@@ -52,6 +92,86 @@ const docTemplate = `{
                     },
                     "404": {
                         "description": "获取失败",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/get/seat": {
+            "post": {
+                "description": "根据请求参数获取用户的预约记录信息",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "seats"
+                ],
+                "summary": "获取预约记录",
+                "parameters": [
+                    {
+                        "description": "查询条件",
+                        "name": "req",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/request.GetRecordReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "获取预约消息成功",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "参数解析失败 或 获取预约消息失败",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/set/seat": {
+            "post": {
+                "description": "根据传入的预约信息设置预约消息",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "seats"
+                ],
+                "summary": "设置预约消息",
+                "parameters": [
+                    {
+                        "description": "预约信息",
+                        "name": "grab",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/request.Grab"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "设置预约消息成功",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "参数解析失败 或 设置预约消息失败",
                         "schema": {
                             "$ref": "#/definitions/response.Response"
                         }
@@ -136,7 +256,7 @@ const docTemplate = `{
             }
         },
         "/users/qq": {
-            "put": {
+            "post": {
                 "description": "根据用户信息修改用户的QQ",
                 "consumes": [
                     "application/json"
@@ -183,6 +303,31 @@ const docTemplate = `{
         }
     },
     "definitions": {
+        "request.GetRecordReq": {
+            "type": "object",
+            "properties": {
+                "date": {
+                    "type": "string"
+                }
+            }
+        },
+        "request.Grab": {
+            "type": "object",
+            "properties": {
+                "date": {
+                    "type": "string"
+                },
+                "end": {
+                    "type": "string"
+                },
+                "seat": {
+                    "type": "string"
+                },
+                "start": {
+                    "type": "string"
+                }
+            }
+        },
         "request.User": {
             "type": "object",
             "properties": {

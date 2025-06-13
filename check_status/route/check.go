@@ -22,6 +22,9 @@ func (cr *CheckRoute) NewGroup(r *gin.Engine) {
 		CheckGroup.POST("/add/user", cr.cc.AddUser)
 		CheckGroup.GET("/delete/user", cr.cc.DeleteUser)
 		CheckGroup.POST("/alter/qq", cr.cc.AlterQQ)
+		CheckGroup.POST("/set/seat", cr.cc.SetSeatRecord)
+		CheckGroup.POST("/get/seat", cr.cc.GetSeatRecord)
+		CheckGroup.POST("/alter/seat", cr.cc.AlterSeatRecord)
 	}
 
 }

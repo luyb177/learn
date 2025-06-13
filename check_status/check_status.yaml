@@ -1,0 +1,43 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: check-status
+  namespace: micro-app
+  labels:
+    app: check-status
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: check-status
+  template:
+    metadata:
+      labels:
+        app: check-status
+    spec:
+      containers:
+        - name: check-status
+          image: crpi-u5azhs6neq326bz0.cn-hangzhou.personal.cr.aliyuncs.com/yub_lu/check_status:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 7777
+              name: http
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: check-status-service
+  namespace: micro-app
+  labels:
+    app: check-status
+spec:
+  type: NodePort
+  selector:
+    app: check-status
+  ports:
+    - name: http
+      port: 7777           # Kubernetes 内部访问端口
+      targetPort: 7777     # 容器中的 Gin 应用监听端口
+      nodePort: 30077      # 宿主机暴露端口，外部访问用它
+      protocol: TCP
+

@@ -149,3 +149,108 @@ func (cc *CheckController) AlterQQ(c *gin.Context) {
 		Message: "修改成功",
 	})
 }
+
+// SetSeatRecord 设置预约消息
+// @Summary 设置预约消息
+// @Description 根据传入的预约信息设置预约消息
+// @Tags seats
+// @Accept json
+// @Produce json
+// @Param grab body request.Grab true "预约信息"
+// @Success 200 {object} response.Response "设置预约消息成功"
+// @Failure 400 {object} response.Response "参数解析失败 或 设置预约消息失败"
+// @Router /set/seat [post]
+func (cc *CheckController) SetSeatRecord(c *gin.Context) {
+	var grab request.Grab
+	err := c.ShouldBindJSON(&grab)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, response.Response{
+			Code:    400,
+			Message: "参数解析失败",
+		})
+		return
+	}
+
+	err = cc.cs.SetSeatRecord(&grab)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, response.Response{
+			Code:    400,
+			Message: "设置预约消息失败",
+			Data:    nil,
+		})
+	}
+	c.JSON(http.StatusOK, response.Response{
+		Code:    200,
+		Message: "设置预约消息成功",
+		Data:    nil,
+	})
+}
+
+// GetSeatRecord 获取预约记录
+// @Summary 获取预约记录
+// @Description 根据请求参数获取用户的预约记录信息
+// @Tags seats
+// @Accept json
+// @Produce json
+// @Param req body request.GetRecordReq true "查询条件"
+// @Success 200 {object} response.Response "获取预约消息成功"
+// @Failure 400 {object} response.Response "参数解析失败 或 获取预约消息失败"
+// @Router /get/seat [post]
+func (cc *CheckController) GetSeatRecord(c *gin.Context) {
+	var req request.GetRecordReq
+	err := c.ShouldBindJSON(&req)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, response.Response{
+			Code:    400,
+			Message: "参数解析失败",
+		})
+		return
+	}
+	info, err := cc.cs.GetSeatRecord(&req)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, response.Response{
+			Code:    400,
+			Message: "获取预约消息失败",
+			Data:    nil,
+		})
+	}
+	c.JSON(http.StatusOK, response.Response{
+		Code:    200,
+		Message: "获取预约消息成功",
+		Data:    info,
+	})
+}
+
+// AlterSeatRecord 修改预约记录
+// @Summary 修改预约记录
+// @Description 根据传入的预约信息修改已有的预约记录
+// @Tags seats
+// @Accept json
+// @Produce json
+// @Param grab body request.Grab true "预约信息"
+// @Success 200 {object} response.Response "修改预约消息成功"
+// @Failure 400 {object} response.Response "参数解析失败 或 修改预约消息失败"
+// @Router /alter/seat [post]
+func (cc *CheckController) AlterSeatRecord(c *gin.Context) {
+	var grab request.Grab
+	err := c.ShouldBindJSON(&grab)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, response.Response{
+			Code:    400,
+			Message: "参数解析失败",
+		})
+		return
+	}
+
+	err = cc.cs.AlterSeatRecord(&grab)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, response.Response{
+			Code:    400,
+			Message: "修改预约消息失败",
+		})
+	}
+	c.JSON(http.StatusOK, response.Response{
+		Code:    200,
+		Message: "修改预约消息成功",
+	})
+}

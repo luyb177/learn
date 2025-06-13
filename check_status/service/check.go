@@ -29,28 +29,33 @@ type CheckService interface {
 	AddUser(user *request.User) error
 	DeleteUser(name string) error
 	AlterQQ(user *request.User) error
+	SetSeatRecord(grab *request.Grab) error
+	GetSeatRecord(req *request.GetRecordReq) (*model.SeatInfo, error)
+	AlterSeatRecord(grab *request.Grab) error
 }
 type Check struct {
 	client *client.Client
 	// 新增上下文相关字段
-	ctx    context.Context    // 主上下文
-	cancel context.CancelFunc // 取消函数
-	Dao    dao.CheckDAO
-	Mail   *tool.Mail
+	ctx     context.Context    // 主上下文
+	cancel  context.CancelFunc // 取消函数
+	Dao     dao.CheckDAO
+	GrabDao dao.GrabDAO
+	Mail    *tool.Mail
 }
 
-func NewCheck(client *client.Client, Dao dao.CheckDAO, Mail *tool.Mail) *Check {
+func NewCheck(client *client.Client, Dao dao.CheckDAO, Mail *tool.Mail, GrabDao dao.GrabDAO) *Check {
 	// 登录
 	client.Login()
 
 	// 创建上下文
 	ctx, cancel := context.WithCancel(context.Background())
 	var check = Check{
-		client: client,
-		ctx:    ctx,
-		cancel: cancel,
-		Dao:    Dao,
-		Mail:   Mail,
+		client:  client,
+		ctx:     ctx,
+		cancel:  cancel,
+		Dao:     Dao,
+		GrabDao: GrabDao,
+		Mail:    Mail,
 	}
 	// 开启定时任务
 	go check.StartCheck()
@@ -72,6 +77,13 @@ func (c *Check) StartCheck() {
 	_, err = cr.AddFunc("@every 10m", c.CheckSeat)
 	if err != nil {
 		log.Printf("检查座位失败: %v", err)
+		return
+	}
+
+	// 每1小时获取座位
+	_, err = cr.AddFunc("@every 1h", c.GetSeat)
+	if err != nil {
+		log.Printf("获取座位失败: %v", err)
 		return
 	}
 	cr.Start()
@@ -253,4 +265,147 @@ func (c *Check) AlterQQ(user *request.User) error {
 	// HSet 在存在的时候会覆盖
 	UrlName := url.QueryEscape(user.Name)
 	return c.Dao.AddUser(UrlName, user.QQ)
+}
+func (c *Check) SetSeatRecord(grab *request.Grab) error {
+	info := model.SeatInfo{
+		Seat:  grab.Seat,
+		Start: grab.Start,
+		End:   grab.End,
+		Date:  grab.Date,
+	}
+	return c.Dao.SetSeatRecord(&info)
+}
+
+func (c *Check) GetSeatRecord(req *request.GetRecordReq) (*model.SeatInfo, error) {
+	return c.Dao.GetSeatRecord(req.Date)
+}
+
+func (c *Check) AlterSeatRecord(grab *request.Grab) error {
+	{
+		info := model.SeatInfo{
+			Seat:  grab.Seat,
+			Start: grab.Start,
+			End:   grab.End,
+			Date:  grab.Date,
+		}
+		return c.Dao.SetSeatRecord(&info)
+	}
+}
+
+// GetSeat 获取明天座位
+// 1、判断时间距离18:00是否小于1小时，若大于1小时则返回，小于1小时则睡眠至17:58
+// 2、按照预先设置的座位信息进行预约
+func (c *Check) GetSeat() {
+
+	// 第一步：判断时间
+	now := time.Now()
+	Six := time.Date(now.Year(), now.Month(), now.Day(), 18, 0, 0, 0, now.Location())
+	sub := Six.Sub(now)
+	if sub > 1*time.Hour {
+		log.Printf("[INFO] 现在时间是%v,距离18:00还有%v,请等待\n", now, sub)
+		return
+	}
+	// 如果18:00已经过了
+	if sub < 0 {
+		if now.Before(Six.Add(2 * time.Minute)) {
+			log.Printf("[WARN] 已过18:00但仍在容忍范围，立即尝试预约")
+			_ = c.BookSeat()
+			return
+		}
+		log.Printf("[INFO] 现在时间是%v,已经错过预约时间%v\n", now, Six)
+		return
+	}
+
+	// 计算时间睡眠
+	sleepDuration := sub - 30*time.Second // 提前30 醒来
+	if sleepDuration > 0 {
+		// 使用context控制安全休眠
+		ctx, cancel := context.WithTimeout(context.Background(), sleepDuration)
+		defer cancel()
+		select {
+		case <-ctx.Done(): // 正常唤醒
+		case <-c.ctx.Done(): // 全局上下文取消（优雅退出）
+			log.Printf("[INFO] process canceled")
+			return
+		}
+
+	}
+
+	// 进入检查阶段
+	ticker := time.NewTicker(1 * time.Second)
+	defer ticker.Stop()
+
+	for {
+		now = time.Now()
+		select {
+		case <-ticker.C:
+			if now.Equal(Six) || now.After(Six) {
+				err := c.BookSeat()
+				if err != nil {
+					log.Printf("[ERROR] 预约失败%v\n", err)
+					return
+				}
+				log.Println("[INFO] 预约成功")
+				return
+			}
+		case <-c.ctx.Done():
+			log.Printf("[INFO] process canceled")
+			return
+
+		}
+	}
+
+}
+
+func (c *Check) BookSeat() error {
+	now := time.Now()
+	tomorrow := now.AddDate(0, 0, 1)
+	data := fmt.Sprintf("%04d-%02d-%02d", now.Year(), now.Month(), tomorrow.Day())
+	// 获取座位信息和时间
+	info, err := c.Dao.GetSeatRecord(data)
+	if err != nil {
+		log.Printf("[ERROR] 获取座位信息失败%v\n", err)
+		return err
+	}
+
+	//获取参数
+	devId, roomId, err := c.GrabDao.FindSeatId(info.Seat)
+	if err != nil {
+		log.Printf("[ERROR] 获取devId和roomId失败%v\n", err)
+		return err
+	}
+	grabInfo := tool.GetParameters(info)
+	grabInfo.DevId = devId
+	grabInfo.RoomId = roomId
+
+	path := "http://kjyy.ccnu.edu.cn/ClientWeb/pro/ajax/reserve.aspx?dialogid=&dev_id=" + grabInfo.DevId + "&lab_id=&kind_id=&room_id=&type=dev&prop=&test_id=&term=&Vnumber=&classkind=&test_name=&start=" + grabInfo.Start + "&end=" + grabInfo.End + "&start_time=" + grabInfo.StartTime + "&end_time=" + grabInfo.EndTime + "&up_file=&memo=&act=set_resv&_=" + grabInfo.TimeMs
+
+	respon, err := c.client.Client.Get(path)
+	if err != nil {
+		log.Println(err.Error())
+		return err
+	}
+	defer respon.Body.Close()
+	body, _ := io.ReadAll(respon.Body)
+	var res pb.Res
+	err = protojson.UnmarshalOptions{
+		DiscardUnknown: true, // 忽略未定义字段
+	}.Unmarshal(body, &res)
+	if err != nil {
+		log.Println(err.Error())
+		return err
+	}
+	fmt.Println(res)
+	if res.Ret == 1 {
+		log.Printf("[INFO] 用户%d预约%s成功", 1, grabInfo.Seat)
+		return nil
+	} else if res.Ret == -1 {
+		// cookie 失效
+		c.client.Login()
+		// 重新登录
+		c.GetSeat()
+	} else if res.Ret == 0 {
+		log.Println(res.Msg)
+	}
+	return nil
 }
